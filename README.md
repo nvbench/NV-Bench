@@ -3,6 +3,8 @@
 **NV-Bench: Benchmarking Nonverbal Vocalization Synthesis in Expressive Text-to-Speech Models**
 
 [![Demo Page](https://img.shields.io/badge/Demo-Page-blue)](https://nvbench.github.io)
+[![Dataset](https://img.shields.io/badge/Dataset-HuggingFace-yellow)](https://huggingface.co/datasets/AnonyData/NV-Bench)
+[![Model](https://img.shields.io/badge/Model-HuggingFace-yellow)](https://huggingface.co/AnonyData/Multilingual-NVASR)
 
 NV-Bench evaluates TTS models on their ability to generate **nonverbal vocalizations** (NVVs) — laughter, coughs, sighs, hesitations, and more — using a dual-dimensional evaluation protocol:
 
