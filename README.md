@@ -194,7 +194,6 @@ export NVBENCH_DNSMOS_MODEL=/path/to/sig_bak_ovr.onnx
 
 ```bibtex
 Coming Soon
-}
 ```
 
 ## License
