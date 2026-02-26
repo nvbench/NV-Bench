@@ -1,0 +1,21 @@
+# NV-Bench Requirements
+# Core
+torch>=2.0
+numpy
+tqdm
+funasr
+torchcodec
+
+# Speaker Similarity (optional)
+# Requires seed-tts-eval and WavLM checkpoint:
+#   git clone https://github.com/BytedanceSpeech/seed-tts-eval.git
+
+# DNSMOS (optional)
+# Requires Amphion preprocessors with ONNX model
+
+# FAD / FD / KL (optional)
+# audioldm_eval has a broken transitive dep (ssr_eval -> wave -> MySQL-python).
+# Install manually:
+#   pip install ssr_eval --no-deps
+#   pip install git+https://github.com/haoheliu/audioldm_eval --no-deps
+#   pip install scipy scikit-image transformers torchlibrosa
