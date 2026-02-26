@@ -1,6 +1,6 @@
 # NV-Bench
 
-**NV-Bench: A Benchmark for Evaluating Nonverbal Vocalizations in Text-to-Speech Systems**
+**NV-Bench: Benchmarking Nonverbal Vocalization Synthesis in Expressive Text-to-Speech Models**
 
 [![Demo Page](https://img.shields.io/badge/Demo-Page-blue)](https://nvbench.github.io)
 
@@ -191,9 +191,7 @@ export NVBENCH_DNSMOS_MODEL=/path/to/sig_bak_ovr.onnx
 ## Citation
 
 ```bibtex
-@article{nvbench2025,
-    title={NV-Bench: A Benchmark for Nonverbal Vocalization in TTS},
-    year={2025}
+Coming Soon
 }
 ```
 
