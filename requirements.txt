@@ -1,21 +1,20 @@
-# NV-Bench Requirements
-# Core
-torch>=2.0
-numpy
-tqdm
-funasr
-torchcodec
-
-# Speaker Similarity (optional)
-# Requires seed-tts-eval and WavLM checkpoint:
-#   git clone https://github.com/BytedanceSpeech/seed-tts-eval.git
-
-# DNSMOS (optional)
-# Requires Amphion preprocessors with ONNX model
-
-# FAD / FD / KL (optional)
-# audioldm_eval has a broken transitive dep (ssr_eval -> wave -> MySQL-python).
-# Install manually:
-#   pip install ssr_eval --no-deps
-#   pip install git+https://github.com/haoheliu/audioldm_eval --no-deps
-#   pip install scipy scikit-image transformers torchlibrosa
+# ───────────────────────────────────────────────────────────────────────────
+# NV-Bench no longer uses a single requirements file.
+#
+# The metric backends need TWO mutually-incompatible environments (see README
+# "Environments"). A single `pip install -r requirements.txt` CANNOT produce a
+# working setup. Use one of:
+#
+#   bash scripts/setup.sh                 # builds both conda envs + fetches assets
+#
+# or install per-env manually:
+#
+#   conda create -n nvbench-core python=3.10 -y
+#   conda activate nvbench-core && pip install -r requirements/core.txt
+#
+#   conda create -n nvbench-acoustic python=3.9 -y
+#   conda activate nvbench-acoustic && pip install -r requirements/acoustic.txt
+#     (then the --no-deps FAD libs — see requirements/acoustic.txt / setup.sh)
+#
+# This file is intentionally left as a pointer to avoid the old single-env trap.
+# ───────────────────────────────────────────────────────────────────────────

@@ -1,0 +1,32 @@
+# ─────────────────────────────────────────────────────────────────────────
+# NV-Bench — CORE environment
+# Steps:  1 (infer / NVASR)   2 (evaluate / CER-WER-PCER)   3a-DNSMOS
+# Python: 3.10
+# Create: conda create -n nvbench-core python=3.10 -y   (or use scripts/setup.sh)
+#
+# Why a separate env: funasr pulls a modern torch (2.x), which is INCOMPATIBLE
+# with audioldm_eval (FAD) and the s3prl WavLM stack (SIM). Those live in the
+# `acoustic` env (requirements/acoustic.txt). DNSMOS is ONNX-only and rides
+# along here because it just needs onnxruntime-gpu.
+# ─────────────────────────────────────────────────────────────────────────
+
+# --- Deep learning core (verified: torch 2.10.0 + cu128) ---
+# Install torch/torchaudio matching your CUDA from https://pytorch.org first if
+# the default wheels don't match your driver, then `pip install -r` the rest.
+torch>=2.4
+torchaudio>=2.4
+torchcodec            # funasr audio backend
+
+# --- Step 1: NVASR (SenseVoiceSmall) ---
+funasr==1.3.1
+
+# --- Step 3a: DNSMOS (ONNX) ---
+# GPU build; falls back to CPU automatically if no CUDAExecutionProvider.
+onnxruntime-gpu
+
+# --- shared ---
+numpy
+scipy
+librosa
+soundfile
+tqdm

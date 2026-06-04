@@ -27,6 +27,7 @@ sys.path.insert(0, PROJECT_ROOT)
 from config import (
     DNSMOS_MODEL_PATH,
     SIM_CKPT_PATH, SEED_TTS_EVAL_DIR,
+    CORE_ENV, ACOUSTIC_ENV,
 )
 
 
@@ -50,17 +51,14 @@ def compute_dnsmos(
     Returns:
         Dict with 'avg_dnsmos', 'scores', 'scored_count', 'skipped_count'.
     """
-    # Import DNSMOS model
-    dnsmos_module_dir = os.path.dirname(model_path)
-    if dnsmos_module_dir not in sys.path:
-        sys.path.append(dnsmos_module_dir)
+    # DNSMOS scorer is vendored at third_party/dnsmos (no Amphion clone, and no
+    # top-level `models` package to collide with seed-tts-eval's `models`).
+    if not os.path.exists(model_path):
+        print(f"[DNSMOS] ONNX model not found: {model_path}")
+        print("[DNSMOS] Set NVBENCH_DNSMOS_MODEL or run scripts/setup.sh to fetch it.")
+        return {"error": f"missing model: {model_path}"}
 
-    try:
-        from models import dnsmos
-    except ImportError as e:
-        print(f"[DNSMOS] Error importing dnsmos module: {e}")
-        print(f"[DNSMOS] Make sure {dnsmos_module_dir} is accessible")
-        return {"error": str(e)}
+    from third_party.dnsmos import dnsmos
 
     try:
         import torch
@@ -69,6 +67,18 @@ def compute_dnsmos(
         device_name = "cpu"
 
     print(f"[DNSMOS] Loading model from {model_path} on {device_name}...")
+    
+    # Check available ONNX Runtime providers and use GPU if available
+    import onnxruntime as ort
+    available_providers = ort.get_available_providers()
+    print(f"[DNSMOS] Available ONNX providers: {available_providers}")
+    
+    if device_name == "cuda" and "CUDAExecutionProvider" not in available_providers:
+        print("[DNSMOS] Warning: CUDA is available but CUDAExecutionProvider not found in ONNX Runtime.")
+        print("[DNSMOS] Please install onnxruntime-gpu: pip install onnxruntime-gpu")
+        print("[DNSMOS] Falling back to CPU...")
+        device_name = "cpu"
+    
     dnsmos_compute_score = dnsmos.ComputeScore(model_path, device_name)
 
     scores = []
@@ -124,8 +134,24 @@ def compute_sim(
     Returns:
         Dict with 'avg_sim', 'scores', 'count'.
     """
-    sys.path.append(SEED_TTS_EVAL_DIR)
-    sys.path.append(os.path.join(SEED_TTS_EVAL_DIR, 'thirdparty/UniSpeech/downstreams/speaker_verification'))
+    speaker_verification_path = os.path.join(SEED_TTS_EVAL_DIR, 'thirdparty/UniSpeech/downstreams/speaker_verification')
+    if speaker_verification_path not in sys.path:
+        sys.path.insert(0, speaker_verification_path)
+    if SEED_TTS_EVAL_DIR not in sys.path:
+        sys.path.insert(0, SEED_TTS_EVAL_DIR)
+
+    # Patch torchaudio for compatibility with newer versions (>=2.1) where
+    # set_audio_backend and sox_effects were removed. s3prl still depends on both.
+    import torchaudio
+    if not hasattr(torchaudio, 'set_audio_backend'):
+        torchaudio.set_audio_backend = lambda backend: None
+    if not hasattr(torchaudio, 'sox_effects'):
+        import types
+        _sox_shim = types.ModuleType('torchaudio.sox_effects')
+        _sox_shim.apply_effects_tensor = lambda tensor, sr, effects=None: (tensor, sr)
+        _sox_shim.apply_effects_file = lambda path, effects=None: (torchaudio.load(path))
+        torchaudio.sox_effects = _sox_shim
+        sys.modules['torchaudio.sox_effects'] = _sox_shim
 
     try:
         from verification import verification as _raw_verification
@@ -179,12 +205,14 @@ def main():
     )
     parser.add_argument("--input_json", type=str, required=True,
                         help="Path to benchmark testset JSON")
-    parser.add_argument("--output_dir", type=str, default="./results",
+    parser.add_argument("--output_dir", type=str, required=True,
                         help="Output directory for results")
-    parser.add_argument("--metrics", type=str, default="dnsmos",
+    parser.add_argument("--metrics", type=str, default="dnsmos,sim",
                         help="Comma-separated metrics: dnsmos, sim")
     parser.add_argument("--wav_key", type=str, default="target_wav_path",
                         help="JSON key for generated audio path")
+    # parser.add_argument("--wav_key", type=str, default="wav_path",
+    #                     help="JSON key for audio path to transcribe")
     parser.add_argument("--ref_wav_key", type=str, default="ref_wav_path",
                         help="JSON key for reference audio path (used by SIM)")
     parser.add_argument("--sim_ckpt", type=str, default=SIM_CKPT_PATH,
@@ -196,6 +224,25 @@ def main():
 
     metrics_to_compute = [m.strip().lower() for m in args.metrics.split(',')]
     os.makedirs(args.output_dir, exist_ok=True)
+
+    # Fail fast with an env-aware message if the wrong conda env is active.
+    # DNSMOS lives in `nvbench-core`; SIM lives in `nvbench-acoustic`.
+    from utils.envcheck import require
+    if "dnsmos" in metrics_to_compute:
+        require(
+            step="3a · DNSMOS", env=CORE_ENV,
+            modules=["onnxruntime"],
+            assets=[("DNSMOS ONNX model", DNSMOS_MODEL_PATH)],
+            hint="pip install -r requirements/core.txt",
+        )
+    if "sim" in metrics_to_compute:
+        require(
+            step="3a · SIM", env=ACOUSTIC_ENV,
+            modules=["s3prl", "torchaudio"],
+            assets=[("WavLM checkpoint", args.sim_ckpt),
+                    ("seed-tts-eval repo", SEED_TTS_EVAL_DIR)],
+            hint="pip install -r requirements/acoustic.txt",
+        )
 
     # Load data
     from data.loader import load_benchmark

@@ -20,7 +20,7 @@ from typing import List, Dict
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, PROJECT_ROOT)
 
-from config import NVASR_MODEL_DIR, DEVICE
+from config import NVASR_MODEL_DIR, DEVICE, OUTPUT_DIR, CORE_ENV
 
 
 def load_nvasr_model(model_dir: str, device: str):
@@ -140,9 +140,9 @@ def main():
     parser.add_argument("--input_json", type=str, required=True,
                         help="Path to benchmark testset JSON file")
     parser.add_argument("--output_dir", type=str, default=None,
-                        help="Output directory for results (default: ./results/<input_name>)")
+                        help="Output directory for results (default: <NVBENCH_OUTPUT_DIR>/<input_name>)")
     parser.add_argument("--model_dir", type=str, default=NVASR_MODEL_DIR,
-                        help="Path to NVASR model directory")
+                        help="Path to NVASR model directory (default: config.NVASR_MODEL_DIR)")
     parser.add_argument("--device", type=str, default=DEVICE,
                         help="Device for inference")
     parser.add_argument("--lang", type=str, default="auto",
@@ -150,20 +150,31 @@ def main():
                         help="Language for NVASR")
     parser.add_argument("--wav_key", type=str, default="target_wav_path",
                         help="JSON key for audio path to transcribe")
+    # parser.add_argument("--wav_key", type=str, default="wav_path",
+    #                     help="JSON key for audio path to transcribe")
     parser.add_argument("--text_key", type=str, default="text",
                         help="JSON key for ground-truth text")
 
     args = parser.parse_args()
+
+    # Fail fast if the wrong env is active or the NVASR model is missing.
+    from utils.envcheck import require
+    require(
+        step="1 · NVASR inference", env=CORE_ENV,
+        modules=["funasr", "torch"],
+        assets=[("NVASR model dir", args.model_dir)],
+        hint="pip install -r requirements/core.txt  +  download Multilingual-NVASR (see README)",
+    )
 
     # Set CUDA device
     if args.device.startswith("cuda"):
         gpu_id = args.device.split(":")[-1] if ":" in args.device else "0"
         os.environ['CUDA_VISIBLE_DEVICES'] = gpu_id
 
-    # Determine output path
+    # Determine output path (default: <NVBENCH_OUTPUT_DIR>/<input_name>)
     input_name = os.path.splitext(os.path.basename(args.input_json))[0]
     if args.output_dir is None:
-        args.output_dir = os.path.join("./results", input_name)
+        args.output_dir = os.path.join(OUTPUT_DIR, input_name)
     output_path = os.path.join(args.output_dir, "infer_results.json")
 
     # Load data

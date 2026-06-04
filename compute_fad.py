@@ -45,7 +45,10 @@ import traceback
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, PROJECT_ROOT)
 
-from config import AUDIOLDM_EVAL_BACKBONE, AUDIOLDM_EVAL_SAMPLE_RATE
+from config import (
+    AUDIOLDM_EVAL_BACKBONE, AUDIOLDM_EVAL_SAMPLE_RATE,
+    ACOUSTIC_ENV, FAD_CNN14_16K, FAD_CNN14,
+)
 
 # Fix PyTorch 2.6 compatibility: default weights_only changed to True,
 # which breaks audioldm_eval's checkpoint loading (uses numpy globals).
@@ -86,6 +89,20 @@ def main():
                         help="Path to save metric results")
 
     args = parser.parse_args()
+
+    # Fail fast if the wrong env is active or the Cnn14 checkpoints are missing.
+    # audioldm_eval loads ./ckpt/Cnn14_16k_mAP=0.438.pth RELATIVE TO CWD, so run
+    # this from the repo root (setup.sh places the checkpoints under ./ckpt).
+    from utils.envcheck import require
+    require(
+        step="3b · FAD/FD/KL", env=ACOUSTIC_ENV,
+        modules=["audioldm_eval", "torch"],
+        assets=[
+            ("Cnn14 16k checkpoint", FAD_CNN14_16K),
+            ("Cnn14 checkpoint (gate)", FAD_CNN14),
+        ],
+        hint="pip install -r requirements/acoustic.txt  (+ setup.sh fetches the Cnn14 checkpoints into ./ckpt)",
+    )
 
     # ─── Parse pairs ───
     pair_list = []

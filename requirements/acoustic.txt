@@ -1,0 +1,39 @@
+# ─────────────────────────────────────────────────────────────────────────
+# NV-Bench — ACOUSTIC environment
+# Steps:  3a-SIM (speaker similarity, WavLM)   3b-FAD / FD / KL (audioldm_eval)
+# Python: 3.9   (audioldm_eval + numpy<2 hard constraint)
+# Create: conda create -n nvbench-acoustic python=3.9 -y   (or use scripts/setup.sh)
+#
+# Why a separate env: audioldm_eval pins an older torch and REQUIRES numpy<2;
+# the WavLM/s3prl speaker-similarity stack is happiest on the same older stack.
+# Both are incompatible with the funasr/torch-2.x `core` env, so they live here
+# together. Verified working set: torch 2.5.1+cu124 / numpy 1.23.5 / s3prl 0.4.18.
+# ─────────────────────────────────────────────────────────────────────────
+
+# --- Deep learning core (match your CUDA; verified torch 2.5.1 + cu124) ---
+# Install first from https://pytorch.org if the default wheels don't match:
+#   pip install torch==2.5.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu124
+torch==2.5.1
+torchaudio==2.5.1
+
+# HARD CONSTRAINT: audioldm_eval breaks on numpy>=2.
+numpy==1.23.5
+scipy==1.11.3
+
+# --- Step 3a: Speaker Similarity (SIM) ---
+# s3prl 0.4.x ships a native WavLM upstream, so fairseq is NOT required.
+s3prl==0.4.18
+soundfile==0.12.1
+librosa==0.10.1
+matplotlib            # pulled in by seed-tts-eval's verification import chain
+fire                  # ditto
+
+# --- Step 3b: FAD / FD / KL ---
+# audioldm_eval has a broken transitive dep (ssr_eval -> wave -> MySQL-python),
+# so it CANNOT be installed normally. scripts/setup.sh installs these with
+# --no-deps after the packages above:
+#   pip install ssr_eval==0.0.7 --no-deps
+#   pip install git+https://github.com/haoheliu/audioldm_eval --no-deps
+#   pip install scikit-image==0.24.0 transformers==4.36.0 torchlibrosa==0.1.0
+#
+# (Listed here for reference; do not `pip install -r` these directly.)

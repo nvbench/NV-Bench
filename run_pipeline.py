@@ -3,12 +3,17 @@ NV-Bench Full Pipeline
 ======================
 One-command orchestrator for the complete NV-Bench evaluation pipeline.
 
-Pipeline Steps:
+Pipeline Steps (this orchestrator runs in the `nvbench-core` env):
     1. infer    — NVASR transcription of TTS-generated speech
     2. evaluate — Instruction Alignment metrics (CER/PCER/OCER or WER/PWER/OWER)
-    3. acoustic — Per-sample Acoustic Fidelity metrics (DNSMOS, SIM)
+    3. acoustic — DNSMOS (per-sample perceptual quality)
 
-Note: For distribution-level metrics (FAD/FD/KL), use compute_fad.py separately.
+Note on environments (see README "Environments"):
+    DNSMOS runs here in `nvbench-core`. SIM and FAD/FD/KL need the
+    `nvbench-acoustic` env (older torch + numpy<2), so run them separately:
+        conda activate nvbench-acoustic
+        python compute_acoustic.py --metrics sim  ...
+        python compute_fad.py                     ...
 
 Usage:
     python run_pipeline.py \\
@@ -36,7 +41,7 @@ import argparse
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, PROJECT_ROOT)
 
-from config import NVASR_MODEL_DIR, DEVICE, SIM_CKPT_PATH
+from config import NVASR_MODEL_DIR, DEVICE, SIM_CKPT_PATH, CORE_ENV, ACOUSTIC_ENV
 
 
 def run_pipeline(args):
@@ -196,6 +201,21 @@ def main():
 
     args = parser.parse_args()
     args.acoustic_metrics = [m.strip().lower() for m in args.acoustic_metrics.split(',')]
+
+    # This orchestrator runs in the core env (infer/evaluate/DNSMOS).
+    steps = [s.strip().lower() for s in args.steps.split(',')]
+    if "infer" in steps:
+        from utils.envcheck import require
+        require(
+            step="1 · NVASR inference", env=CORE_ENV,
+            modules=["funasr", "torch"],
+            assets=[("NVASR model dir", args.model_dir)],
+            hint="pip install -r requirements/core.txt",
+        )
+    if "sim" in args.acoustic_metrics:
+        print(f"[Pipeline] WARNING: SIM needs the `{ACOUSTIC_ENV}` env and will likely be skipped here.")
+        print(f"[Pipeline]          Run SIM separately: conda activate {ACOUSTIC_ENV}; "
+              "python compute_acoustic.py --metrics sim ...")
 
     run_pipeline(args)
 

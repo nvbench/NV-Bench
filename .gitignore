@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+.ipynb_checkpoints/
+
+# Large assets provisioned by scripts/setup.sh (do NOT commit)
+checkpoints/
+ckpt/
+third_party/seed-tts-eval/
+
+# Outputs / scratch
+results/
+temp_gt_aligned/
+temp_gen_aligned/
+*_temp_gen_aligned.json
+*_fad_feature_cache.npy
+*classifier_logits_feature_cache.pkl
+
+# Keep vendored code under third_party/dnsmos (tracked) but ignore caches there
+third_party/**/__pycache__/
